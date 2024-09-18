@@ -328,6 +328,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "embassy-stm32f1xx-template"
+version = "0.1.0"
+dependencies = [
+ "cortex-m",
+ "cortex-m-rt",
+ "defmt",
+ "defmt-rtt",
+ "embassy-executor",
+ "embassy-futures",
+ "embassy-stm32",
+ "embassy-sync 0.6.0",
+ "embassy-time",
+ "embassy-usb",
+ "embedded-hal 1.0.0",
+ "futures",
+ "heapless",
+ "nb 1.1.0",
+ "panic-probe",
+]
+
+[[package]]
 name = "embassy-sync"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -349,6 +370,7 @@ checksum = "b3e0c49ff02ebe324faf3a8653ba91582e2d0a7fdef5bc88f449d5aa1bfcc05c"
 dependencies = [
  "cfg-if",
  "critical-section",
+ "defmt",
  "embedded-io-async",
  "futures-util",
  "heapless",
@@ -718,27 +740,6 @@ name = "rand_core"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
-
-[[package]]
-name = "rust-stm32f1xx-blink"
-version = "0.1.0"
-dependencies = [
- "cortex-m",
- "cortex-m-rt",
- "defmt",
- "defmt-rtt",
- "embassy-executor",
- "embassy-futures",
- "embassy-stm32",
- "embassy-sync 0.5.0",
- "embassy-time",
- "embassy-usb",
- "embedded-hal 0.2.7",
- "futures",
- "heapless",
- "nb 0.1.3",
- "panic-probe",
-]
 
 [[package]]
 name = "rustc_version"
