@@ -1,26 +1,19 @@
 #![no_std]
 #![no_main]
-#![deny(unsafe_code)]
 
 use defmt_rtt as _;
 use panic_probe as _;
 
 use cortex_m_rt::entry;
 use stm32f1xx_hal::gpio::GpioExt;
-use stm32f1xx_hal::pac;
+use stm32f1xx_hal::pac::{self};
 use stm32f1xx_hal::prelude::_stm32_hal_flash_FlashExt;
 use stm32f1xx_hal::rcc::RccExt;
 
 use stm32f1xx_hal::gpio::{ gpioa::Parts as PartsA, gpiob::Parts as PartsB };
 
-struct Segments {
-}
+mod tube;
 
-impl Segments {
-    fn create(gpioa: &mut PartsA, gpiob: &mut PartsB) -> Self {
-
-    }
-}
 
 
 #[entry]
