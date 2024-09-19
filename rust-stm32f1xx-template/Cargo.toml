@@ -10,5 +10,6 @@ cortex-m-rt = "*"
 stm32f1xx-hal = {version = "*", features = ["rt", "stm32f103", "medium"]}
 defmt = "*"
 defmt-rtt = "*"
+fugit = "*"
 panic-probe = {version = "*", features = ["print-defmt"]}
 nb = "*"

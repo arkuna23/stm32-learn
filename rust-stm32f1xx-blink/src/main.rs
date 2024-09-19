@@ -8,11 +8,20 @@ use fugit::ExtU32;
 use panic_probe as _;
 
 use cortex_m_rt::entry;
-use stm32f1xx_hal::gpio::{GpioExt, IOPinSpeed, OutputSpeed};
-use stm32f1xx_hal::pac;
-use stm32f1xx_hal::prelude::_stm32_hal_flash_FlashExt;
-use stm32f1xx_hal::rcc::RccExt;
-use stm32f1xx_hal::timer::SysTimerExt;
+use stm32f1xx_hal::{
+    gpio::{IOPinSpeed, OutputSpeed},
+    pac,
+    prelude::*,
+};
+
+macro_rules! setup_pin {
+    ($gpio:expr, $pin:expr, $speed:expr) => {{
+        let mut pin = $pin.into_push_pull_output(&mut $gpio.crl);
+        pin.set_high();
+        pin.set_speed(&mut $gpio.crl, $speed);
+        pin.erase()
+    }};
+}
 
 #[entry]
 fn main() -> ! {
@@ -26,18 +35,26 @@ fn main() -> ! {
 
     // 冻结系统中所有时钟的配置，并将冻结的频率存储在时钟中
     let clocks = rcc.cfgr.freeze(&mut flash.acr);
-    let mut gpioa = dp.GPIOA.split();
+
     let mut gpioc = dp.GPIOC.split();
-    let mut timer = cp.SYST.delay(&clocks);
     let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh);
-    led.set_speed(&mut gpioc.crh, IOPinSpeed::Mhz2);
-    let mut light = gpioa.pa0.into_push_pull_output(&mut gpioa.crl);
-    light.set_speed(&mut gpioa.crl, IOPinSpeed::Mhz2);
+
+    let mut gpioa = dp.GPIOA.split();
+    let mut lights = [
+        setup_pin!(gpioa, gpioa.pa0, IOPinSpeed::Mhz2),
+        setup_pin!(gpioa, gpioa.pa1, IOPinSpeed::Mhz2),
+        setup_pin!(gpioa, gpioa.pa2, IOPinSpeed::Mhz2),
+        setup_pin!(gpioa, gpioa.pa3, IOPinSpeed::Mhz2),
+    ];
+    let mut timer = cp.SYST.delay(&clocks);
 
     loop {
-        timer.delay(1.secs());
-        println!("blink");
-        light.toggle();
-        led.toggle();
+        for ele in lights.as_mut() {
+            println!("blink");
+            led.toggle();
+            ele.set_low();
+            timer.delay(500_u32.millis());
+            ele.set_high();
+        }
     }
 }
