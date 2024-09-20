@@ -1,4 +1,7 @@
-use stm32f1xx_hal::{pac::Peripherals, stm32};
+use stm32f1xx_hal::{
+    gpio::{ErasedPin, GpioExt, IOPinSpeed, Output, OutputSpeed, PinState},
+    pac::{GPIOA, GPIOB},
+};
 
 macro_rules! init_gpio {
     ($gpio:expr, $mask:expr) => {
@@ -8,7 +11,9 @@ macro_rules! init_gpio {
                 let inuse = ($mask >> i) & 1;
                 if inuse == 1 {
                     crl &= !(0b1111 << (i * 4));
-                    crl |= 0b0010 << (i * 4);
+                    // 0001: 通用推免输出，最大速度10MHz
+                    // 0010: 通用推免输出，最大速度2MHz
+                    crl |= 0b0001 << (i * 4);
                 }
             }
             unsafe { w.bits(crl) }
@@ -19,7 +24,9 @@ macro_rules! init_gpio {
                 let inuse = ($mask >> i) & 1;
                 if inuse == 1 {
                     crh &= !(0b1111 << (i * 4));
-                    crh |= 0b0010 << (i * 4);
+                    // 0001: 通用推免输出，最大速度10MHz
+                    // 0010: 通用推免输出，最大速度2MHz
+                    crh |= 0b0001 << (i * 4);
                 }
             }
             unsafe { w.bits(crh) }
@@ -50,19 +57,24 @@ impl Default for Segments {
     }
 }
 impl Segments {
-    pub fn init(dp: &stm32::Peripherals) {
-        init_gpio!(dp.GPIOA, SEGMENTS_MASK);
+    pub fn init(gpioa: &GPIOA) {
+        init_gpio!(gpioa, SEGMENTS_MASK);
     }
 
-    pub fn update(&self, dp: &stm32::Peripherals) {
-        dp.GPIOA.odr.modify(|r, w| unsafe {
+    /// 改变当前控制的数码管显示状态，需要先改变当前控制的数码管
+    pub fn update(&self, gpioa: &GPIOA) {
+        gpioa.odr.modify(|r, w| unsafe {
             w.bits((r.bits() & !SEGMENTS_MASK) | (self.state & SEGMENTS_MASK))
         });
     }
 
     pub fn set_display<D: SegDisplay>(&mut self) {
-        self.state = D::state();
+        self.state = D::STATE;
     }
+}
+
+pub trait SegDisplay {
+    const STATE: u32;
 }
 
 /// 5461BS-1 4位
@@ -75,11 +87,18 @@ impl Segments {
 /// DP(3) -> PA10
 /// C(4) -> PA11
 /// G(5) -> PA12
-pub trait SegDisplay {
-    fn state() -> u32;
-}
+pub struct Segment;
 
-pub const TUBE_MASK: u32 = 0b1000_1100_0000_0010;
+impl Segment {
+    pub const A: u32 = 1 << 7;
+    pub const B: u32 = 1 << 6;
+    pub const F: u32 = 1 << 5;
+    pub const E: u32 = 1 << 8;
+    pub const D: u32 = 1 << 9;
+    pub const DP: u32 = 1 << 10;
+    pub const C: u32 = 1 << 11;
+    pub const G: u32 = 1 << 12;
+}
 
 /// 5461BS-1 4位
 /// [文档](http://www.xlitx.com/datasheet/5461BS.pdf)
@@ -87,35 +106,58 @@ pub const TUBE_MASK: u32 = 0b1000_1100_0000_0010;
 /// DIG2(9) -> PB10
 /// DIG3(8) -> PB1
 /// DIG4(6) -> PB15
-pub struct Tube<'a> {
-    segments_n: [Segments; 4],
-    dp: &'a stm32::Peripherals,
+pub struct Tube {
+    segments_n: [(ErasedPin<Output>, Segments); 4],
+    gpioa: GPIOA,
 }
-impl<'a> Tube<'a> {
-    pub fn init(dp: &'a Peripherals) {
+
+macro_rules! gpio_init_low {
+    ($gpio:expr, $pin: expr) => {{
+        let mut io = $pin.into_push_pull_output_with_state(&mut $gpio.crl, PinState::High);
+        io.set_speed(&mut $gpio.crl, IOPinSpeed::Mhz2);
+        io.erase()
+    }};
+}
+
+macro_rules! gpio_init_high {
+    ($gpio:expr, $pin: expr) => {{
+        let mut io = $pin.into_push_pull_output_with_state(&mut $gpio.crh, PinState::High);
+        io.set_speed(&mut $gpio.crh, IOPinSpeed::Mhz2);
+        io.erase()
+    }};
+}
+
+impl Tube {
+    pub fn new(gpioa: GPIOA, gpiob: GPIOB) -> Tube {
         static mut INITED: bool = false;
         assert!(!unsafe { INITED }, "Tube has been initialized");
-        Segments::init(dp);
-        init_gpio!(dp.GPIOB, TUBE_MASK);
+        Segments::init(&gpioa);
+        let mut gpiob = gpiob.split();
+
         unsafe {
             INITED = true;
-        }
-    }
-
-    pub fn new(dp: &'a Peripherals) -> Tube<'a> {
+        };
         Self {
-            segments_n: Default::default(),
-            dp,
+            segments_n: [
+                (gpio_init_high!(gpiob, gpiob.pb11), Segments::default()),
+                (gpio_init_high!(gpiob, gpiob.pb10), Segments::default()),
+                (gpio_init_low!(gpiob, gpiob.pb1), Segments::default()),
+                (gpio_init_high!(gpiob, gpiob.pb15), Segments::default()),
+            ],
+            gpioa,
         }
     }
 
-    pub fn update(&self) {
-        for seg in self.segments_n.iter() {
-            seg.update(self.dp);
+    pub fn update(&mut self) {
+        for (dig, seg) in self.segments_n.iter_mut() {
+            dig.set_low();
+            seg.update(&self.gpioa);
+            dig.set_low();
         }
     }
 
+    /// 设置特定位的数码管显示
     pub fn set_display<D: SegDisplay>(&mut self, n: usize) {
-        self.segments_n[n].set_display::<D>();
+        self.segments_n[n].1.set_display::<D>();
     }
 }
