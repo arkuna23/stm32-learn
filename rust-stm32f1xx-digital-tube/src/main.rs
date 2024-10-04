@@ -1,20 +1,45 @@
 #![no_std]
 #![no_main]
 
+use defmt::println;
 use defmt_rtt as _;
+use display::Number;
 use fugit::RateExtU32;
 use nb::block;
 use panic_probe as _;
 
 use cortex_m_rt::entry;
-use stm32f1xx_hal::pac::{self};
+use stm32f1xx_hal::pac::{self, SYST};
 use stm32f1xx_hal::prelude::_stm32_hal_flash_FlashExt;
-use stm32f1xx_hal::rcc::RccExt;
-use stm32f1xx_hal::timer::Timer;
+use stm32f1xx_hal::rcc::{Clocks, RccExt};
+use stm32f1xx_hal::timer::{self, SysCounterHz};
 use tube::Tube;
 
-mod tube;
 mod display;
+mod tube;
+
+pub struct Timer {
+    timer: SysCounterHz,
+    count: u64,
+}
+
+impl Timer {
+    pub fn new(hz: u32, syst: SYST, clocks: &Clocks) -> Self {
+        let mut timer = timer::Timer::syst(syst, clocks).counter_hz();
+        timer.start(hz.Hz()).unwrap();
+        Self { timer, count: 0 }
+    }
+
+    pub fn delay(&mut self) {
+        block!(self.timer.wait()).unwrap();
+        self.count += 1;
+    }
+
+    #[inline(always)]
+    pub fn count(&self) -> u64 {
+        self.count
+    }
+}
 
 #[entry]
 fn main() -> ! {
@@ -29,12 +54,17 @@ fn main() -> ! {
     // 冻结系统中所有时钟的配置，并将冻结的频率存储在时钟中
     let clocks = rcc.cfgr.freeze(&mut flash.acr);
 
-    let mut timer = Timer::syst(cp.SYST, &clocks).counter_hz();
+    let mut timer = Timer::new(24, cp.SYST, &clocks);
     let mut tube = Tube::new(dp.GPIOA, dp.GPIOB);
-    timer.start(24_u32.Hz()).unwrap();
 
+    let mut secs = Number(0);
+    println!("start loop");
+    tube.set_tube(secs);
     loop {
-        tube.update();
-        block!(timer.wait()).unwrap();
+        if timer.count() % 24 == 0 {
+            secs.0 += 1;
+            tube.set_tube(secs);
+        }
+        tube.show(&mut timer);
     }
 }
