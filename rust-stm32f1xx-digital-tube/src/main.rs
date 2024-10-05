@@ -41,6 +41,8 @@ impl Timer {
     }
 }
 
+const FREQ: u32 = 360;
+
 #[entry]
 fn main() -> ! {
     // 获取对外设的访问对象
@@ -54,16 +56,19 @@ fn main() -> ! {
     // 冻结系统中所有时钟的配置，并将冻结的频率存储在时钟中
     let clocks = rcc.cfgr.freeze(&mut flash.acr);
 
-    let mut timer = Timer::new(24, cp.SYST, &clocks);
+    let mut timer = Timer::new(FREQ, cp.SYST, &clocks);
     let mut tube = Tube::new(dp.GPIOA, dp.GPIOB);
 
-    let mut secs = Number(0);
+    let mut secs = Number::new(0);
     println!("start loop");
-    tube.set_tube(secs);
+    tube.set_tube(secs.clone());
+    let mut dot = 0;
     loop {
-        if timer.count() % 24 == 0 {
-            secs.0 += 1;
-            tube.set_tube(secs);
+        if timer.count() % FREQ as u64 == 0 {
+            secs.n += 1;
+            dot += 1;
+            dot %= 4;
+            tube.set_tube(secs.clone().set_dot(dot));
         }
         tube.show(&mut timer);
     }

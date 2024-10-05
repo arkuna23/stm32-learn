@@ -64,21 +64,40 @@ pub fn digit_to_segments(digit: u8) -> u32 {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Number(pub u16);
+#[derive(Debug, Clone)]
+pub struct Number {
+    pub n: u16,
+    pub dots: u8,
+}
 
 impl TubeDisplay for Number {
     fn tube_bits(self) -> [impl SegDisplay; 4] {
-        assert!(self.0 < 10000, "Number out of range");
-        let mut number = self.0;
+        assert!(self.n < 10000, "Number out of range");
+        let mut number = self.n;
         let mut segs = [0u32; 4];
-        (0..4).for_each(|i| {
+        (0..4).rev().for_each(|i| {
             segs[i] = {
                 let digit: u8 = (number % 10) as u8;
                 number /= 10;
-                digit_to_segments(digit).combine(Segment::DP)
+                digit_to_segments(digit).combine(if (self.dots >> i) & 1 == 1 {
+                    Segment::DP
+                } else {
+                    0
+                })
             }
         });
         segs
+    }
+}
+
+impl Number {
+    pub fn new(num: u16) -> Self {
+        Self { n: num, dots: 0 }
+    }
+
+    #[inline(always)]
+    pub fn set_dot(mut self, idx: usize) -> Self {
+        self.dots |= 1 << idx;
+        self
     }
 }

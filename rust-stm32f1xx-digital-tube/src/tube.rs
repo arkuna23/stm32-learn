@@ -6,7 +6,7 @@ use stm32f1xx_hal::{
 
 use crate::Timer;
 
-pub const SEGMENTS_MASK: u32 = 0b0001_1111_1000_0000;
+pub const SEGMENTS_MASK: u32 = 0b0001_1111_1110_0000;
 
 pub struct Segments {
     pub state: u32,
@@ -25,18 +25,19 @@ impl Segments {
             for i in 0..=7 {
                 let inuse = (SEGMENTS_MASK >> i) & 1;
                 if inuse == 1 {
+                    println!("i: {}", i);
                     crl &= !(0b1111 << (i * 4));
                     // 0001: 通用推免输出，最大速度10MHz
                     // 0010: 通用推免输出，最大速度2MHz
                     crl |= 0b0001 << (i * 4);
                 }
             }
-            println!("crl: {:032b}", crl);
             unsafe { w.bits(crl) }
         });
         gpioa.crh.modify(|r, w| {
             let mut crh = r.bits();
             for i in 0..=7 {
+                println!("i: {}", i);
                 let inuse = (SEGMENTS_MASK >> (i + 8)) & 1;
                 if inuse == 1 {
                     crh &= !(0b1111 << (i * 4));
@@ -51,10 +52,12 @@ impl Segments {
     }
 
     /// 改变当前控制的数码管显示状态，需要先改变当前控制的数码管
-    pub fn show(&self, gpioa: &GPIOA) {
-        gpioa
-            .odr
-            .modify(|r, w| unsafe { w.bits(r.bits() & (!self.state)) });
+    pub fn set_gpio(&self, gpioa: &GPIOA) {
+        gpioa.odr.modify(|r, w| unsafe {
+            // 1代表不显示, 0代表显示
+            let bits = (r.bits() | SEGMENTS_MASK) & !self.state;
+            w.bits(bits)
+        });
     }
 }
 
@@ -154,14 +157,14 @@ impl Tube {
         static mut INITED: bool = false;
 
         assert!(!unsafe { INITED }, "Tube has been initialized");
+        unsafe {
+            INITED = true;
+        };
         println!("init digital tube...");
         gpio_enable!(GPIOA);
         Segments::init(&gpioa);
         let mut gpiob = gpiob.split();
 
-        unsafe {
-            INITED = true;
-        };
         Self {
             segments_n: [
                 (gpio_init_high!(gpiob, gpiob.pb11), Segments::default()),
@@ -175,7 +178,7 @@ impl Tube {
 
     pub fn show(&mut self, timer: &mut Timer) {
         for (dig, seg) in self.segments_n.iter_mut() {
-            seg.show(&self.gpioa);
+            seg.set_gpio(&self.gpioa);
             dig.set_high();
             timer.delay();
             dig.set_low();
@@ -183,6 +186,7 @@ impl Tube {
     }
 
     /// 设置特定位的数码管显示
+    #[allow(dead_code)]
     pub fn set_display(&mut self, n: usize, dis: impl SegDisplay) {
         self.segments_n[n].1.state = dis.bits();
     }
