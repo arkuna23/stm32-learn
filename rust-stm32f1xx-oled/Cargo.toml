@@ -1,8 +1,8 @@
 [package]
-name = "{{project-name}}"
+name = "rust-stm32f1xx-oled"
 version = "0.1.0"
 edition = "2021"
-authors = ["{{authors}}"]
+authors = ["Arkuna <nightalpha23@gmail.com>"]
 
 [dependencies]
 cortex-m = {version = "*", features = ["critical-section-single-core"]}
@@ -13,4 +13,7 @@ defmt-rtt = "*"
 fugit = "*"
 panic-probe = {version = "*", features = ["print-defmt"]}
 nb = "*"
-embedded-hal = "*"
+embedded-hal = "^0.2.7"
+iic-oled-rs = { path = "../iic-oled-rs" }
+embedded-graphics = "*"  # 用于绘图
+ssd1306 = "*"  # 用于 SSD1306 驱动
