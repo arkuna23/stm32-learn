@@ -3,7 +3,6 @@
 #![deny(unsafe_code)]
 
 use defmt_rtt as _;
-use embedded_graphics::drawable::Drawable;
 use embedded_graphics::geometry::Point;
 use embedded_graphics::image::{Image, ImageRaw};
 use fugit::RateExtU32;
@@ -62,10 +61,9 @@ fn main() -> ! {
         1000,
         1000,
     );
-    let mut oled = Oled::<2, _>::new(i2c);
+    let mut oled = Oled::<64, _>::new(i2c);
     oled.init().unwrap();
     oled.clear().unwrap();
-    oled.send_data(&[0xff; 256 * 8]).unwrap();
 
     loop {}
 }
