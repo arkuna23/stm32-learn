@@ -15,5 +15,3 @@ panic-probe = {version = "*", features = ["print-defmt"]}
 nb = "*"
 embedded-hal = "^0.2.7"
 iic-oled-rs = { path = "../iic-oled-rs" }
-embedded-graphics = "*"  # 用于绘图
-ssd1306 = "*"  # 用于 SSD1306 驱动

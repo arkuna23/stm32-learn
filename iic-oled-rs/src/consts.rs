@@ -29,5 +29,5 @@ impl SSD1306Cmd {
     pub const SET_DISPLAY_START_LINE: u8 = 0x40;
 }
 
-pub const CMD_BUFFER_SIZE: usize = 8;
+pub const CMD_BUFFER_SIZE: usize = 4;
 pub const DATA_BUFFER_SIZE: usize = 128;

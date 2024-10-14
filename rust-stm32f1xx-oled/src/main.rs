@@ -3,33 +3,24 @@
 #![deny(unsafe_code)]
 
 use defmt_rtt as _;
-use embedded_graphics::geometry::Point;
-use embedded_graphics::image::{Image, ImageRaw};
 use fugit::RateExtU32;
 use iic_oled_rs::Oled;
 use panic_probe as _;
 
 use cortex_m_rt::entry;
-use embedded_hal::blocking::i2c::{Write, WriteIter};
-use ssd1306::mode::{BufferedGraphicsMode, DisplayConfig};
-use ssd1306::rotation::DisplayRotation;
-use ssd1306::size::DisplaySize128x64;
-use ssd1306::{I2CDisplayInterface, Ssd1306};
 use stm32f1xx_hal::afio::AfioExt;
 use stm32f1xx_hal::gpio::GpioExt;
-use stm32f1xx_hal::i2c::{BlockingI2c, DutyCycle, I2c, Mode};
+use stm32f1xx_hal::i2c::{BlockingI2c, DutyCycle, Mode};
 use stm32f1xx_hal::pac;
 use stm32f1xx_hal::prelude::_stm32_hal_flash_FlashExt;
 use stm32f1xx_hal::rcc::RccExt;
-use stm32f1xx_hal::timer::Timer;
 
 #[entry]
 fn main() -> ! {
     // 获取对外设的访问对象
     let _cp = cortex_m::Peripherals::take().unwrap();
     let dp = pac::Peripherals::take().unwrap();
-
-    // 获得原始flash和rcc设备的所有权，并将它们转换为相应的HAL结构
+// 获得原始flash和rcc设备的所有权，并将它们转换为相应的HAL结构
     let mut flash = dp.FLASH.constrain();
     let rcc = dp.RCC.constrain();
 
@@ -65,5 +56,7 @@ fn main() -> ! {
     oled.init().unwrap();
     oled.clear().unwrap();
 
-    loop {}
+    let mut count = 0;
+    loop {
+    }
 }
