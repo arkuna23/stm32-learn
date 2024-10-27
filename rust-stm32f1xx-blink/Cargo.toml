@@ -13,3 +13,6 @@ defmt = "*"
 defmt-rtt = "*"
 panic-probe = {version = "*", features = ["print-defmt"]}
 nb = "*"
+
+[profile.dev]
+opt-level = 3
