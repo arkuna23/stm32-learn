@@ -63,7 +63,6 @@ impl<const H: usize, I: Write> Oled<H, I> {
         self.send_cmd(&[SSD1306Cmd::SET_DISPLAY_OFFSET, 0x00])?;
         self.send_cmd(&[SSD1306Cmd::SET_CHARGE_PUMP, SSD1306Cmd::CHARGE_PUMP_ENABLE])?;
         self.send_one_byte_cmds(&[
-            SSD1306Cmd::MEMORY_MODE,
             SSD1306Cmd::SET_DISPLAY_START_LINE,
             SSD1306Cmd::SEG_REMAP | 0x1,
             SSD1306Cmd::COM_SCAN_DEC,
@@ -81,8 +80,18 @@ impl<const H: usize, I: Write> Oled<H, I> {
 
     pub fn clear(&mut self) -> Result<(), I::Error> {
         for _ in 0..H / 8 {
-            self.send_data(&[0xff; 128])?;
+            self.send_data(&[0x00; 128])?;
         }
         Ok(())
+    }
+
+    #[inline(always)]
+    pub fn vertical_mem_mode(&mut self) -> Result<(), I::Error> {
+        self.send_cmd(&[SSD1306Cmd::MEMORY_MODE, 0x01])
+    }
+
+    #[inline(always)]
+    pub fn horizontal_mem_mode(&mut self) -> Result<(), I::Error> {
+        self.send_cmd(&[SSD1306Cmd::MEMORY_MODE, 0x00])
     }
 }

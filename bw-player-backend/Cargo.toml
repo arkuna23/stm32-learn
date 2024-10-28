@@ -1,0 +1,11 @@
+[package]
+name = "bw-player-backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = { version = "*", features = ["derive"] }
+bw-img-comm = { path = "../bw-img-comm" }
+bw-img = { git = "https://github.com/arkuna23/bw-img.git" }
+eyre = "*"
+serialport = "*"
