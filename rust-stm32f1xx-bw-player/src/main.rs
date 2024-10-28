@@ -102,26 +102,26 @@ fn main() -> ! {
         }
 
         // 从串口读取数据
-        let signal = if opcode[0] == FULL_DATA_BYTE {
-            let mut offset = 0;
-            while offset < buffer.len() {
-                match serial.read(&mut buffer[offset..]) {
-                    Ok(count) => {
-                        offset += count;
-                    }
-                    Err(UsbError::WouldBlock) => {
-                        continue;
-                    }
-                    Err(e) => {
-                        panic!("read error: {:?}", e);
+        let signal = match opcode[0] {
+            FULL_DATA_BYTE => {
+                let mut offset = 0;
+                while offset < buffer.len() {
+                    match serial.read(&mut buffer[offset..]) {
+                        Ok(count) => {
+                            offset += count;
+                        }
+                        Err(UsbError::WouldBlock) => {
+                            continue;
+                        }
+                        Err(e) => {
+                            panic!("read error: {:?}", e);
+                        }
                     }
                 }
+                Signal::FullData(&buffer)
             }
-            Signal::new(opcode[0], Some(&buffer))
-        } else {
-            Signal::new(opcode[0], None)
-        }
-        .unwrap();
+            _ => Signal::new(opcode[0], None).unwrap(),
+        };
 
         match signal {
             Signal::FullData(data) => {
